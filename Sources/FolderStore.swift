@@ -74,7 +74,7 @@ final class FolderStore: ObservableObject {
     // MARK: - 讀取
 
     func reload() {
-        run(work: { folder in
+        run(work: { (folder: URL) -> Snapshot in
             let data = try FolderStore.coordinatedRead(folder.appendingPathComponent("snapshot.json"))
             return try JSONDecoder().decode(Snapshot.self, from: data)
         }, success: { snap in
