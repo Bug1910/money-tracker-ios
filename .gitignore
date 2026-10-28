@@ -1,0 +1,18 @@
+# 真實金錢資料一律不進 repo（這個 repo 是公開的）
+*.json
+*.csv
+*.pdf
+data/
+# 例外：Xcode 圖示資料夾的設定檔（不含任何金錢資料）
+!**/*.xcassets/Contents.json
+!**/*.xcassets/**/Contents.json
+
+# 編譯產物
+*.ipa
+build/
+DerivedData/
+Payload/
+*.xcodeproj/
+*.xcworkspace/
+xcuserdata/
+.DS_Store
