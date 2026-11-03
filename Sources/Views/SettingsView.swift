@@ -1,10 +1,11 @@
-// 角色：主畫面。
-// 由上到下：資料夾（選擇）→ 快照三個數字＋讀取時間（重新讀取）→ 寫入測試 → 狀態／錯誤訊息。
+// 角色：設定頁（從左上角齒輪進來）。
+// 管三件事：選同步資料夾、手動重新讀取快照、看狀態／錯誤訊息（錯誤顯示系統原文，方便實機除錯）。
 import SwiftUI
 import UniformTypeIdentifiers
 
-struct ContentView: View {
-    @StateObject private var store = FolderStore()
+struct SettingsView: View {
+    @ObservedObject var store: FolderStore
+    @Environment(\.dismiss) private var dismiss
     @State private var picking = false
 
     var body: some View {
@@ -17,15 +18,9 @@ struct ContentView: View {
 
                 Section("快照") {
                     LabeledContent("資料日期", value: store.snapshot?.generatedAt ?? "—")
-                    LabeledContent("還能自由花", value: money(store.snapshot?.freeMoney?.freeLeft))
-                    LabeledContent("總資產", value: money(store.snapshot?.assets?.total))
                     LabeledContent("讀取時間", value: timeText(store.readAt))
+                    LabeledContent("記帳筆數", value: String(store.entries.count))
                     Button("重新讀取") { store.reload() }
-                        .disabled(store.folderName == nil || store.busy)
-                }
-
-                Section("同步測試") {
-                    Button("寫入測試") { store.writeTest() }
                         .disabled(store.folderName == nil || store.busy)
                 }
 
@@ -40,13 +35,19 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("金錢盤點")
+            .navigationTitle("設定")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("完成") { dismiss() }
+                }
+            }
             .overlay {
                 if store.busy {
                     ProgressView()
                 }
             }
-            .fileImporter(isPresented: $picking, allowedContentTypes: [UTType.folder], allowsMultipleSelection: false) { result in
+            .fileImporter(isPresented: $picking, allowedContentTypes: [UTType.folder], allowsMultipleSelection: false) { (result: Result<[URL], Error>) in
                 switch result {
                 case .success(let urls):
                     if let url = urls.first {
@@ -57,14 +58,6 @@ struct ContentView: View {
                 }
             }
         }
-    }
-
-    private func money(_ value: Double?) -> String {
-        guard let value = value else { return "—" }
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.maximumFractionDigits = 0
-        return f.string(from: NSNumber(value: value)) ?? "—"
     }
 
     private func timeText(_ date: Date?) -> String {
