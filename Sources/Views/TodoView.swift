@@ -104,7 +104,7 @@ struct TodoView: View {
                             Text(entry.category.isEmpty ? "未分類" : entry.category)
                             Spacer()
                             Text(Formats.money(entry.amount)).monospacedDigit()
-                            Text(entry.matched ? "已入帳" : "待入帳")
+                            Text(snapshot.isMatched(entry) ? "已入帳" : "待入帳")
                                 .font(.caption)
                                 .foregroundStyle(Color.primary)
                         }

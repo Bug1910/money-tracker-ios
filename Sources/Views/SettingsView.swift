@@ -7,6 +7,7 @@ struct SettingsView: View {
     @ObservedObject var store: FolderStore
     @Environment(\.dismiss) private var dismiss
     @State private var picking = false
+    @State private var logLines: [String] = []
 
     var body: some View {
         NavigationStack {
@@ -24,6 +25,17 @@ struct SettingsView: View {
                         .disabled(store.folderName == nil || store.busy)
                 }
 
+                Section("記錄（最近 50 行）") {
+                    if logLines.isEmpty {
+                        Text("尚無記錄")
+                    } else {
+                        Text(logLines.joined(separator: "\n"))
+                            .font(.caption2.monospaced())
+                            .textSelection(.enabled)
+                    }
+                    Button("重新整理記錄") { logLines = AppLog.recent(50) }
+                }
+
                 if let message = store.message {
                     Section {
                         Text(message)
@@ -35,6 +47,7 @@ struct SettingsView: View {
                     }
                 }
             }
+            .onAppear { logLines = AppLog.recent(50) }
             .navigationTitle("設定")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

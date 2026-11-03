@@ -47,6 +47,7 @@ final class FolderStore: ObservableObject {
             folderName = url.lastPathComponent
             snapshot = nil
             readAt = nil
+            AppLog.write("選擇資料夾")
             showInfo("已選擇資料夾")
         } catch {
             showError(error)
@@ -75,6 +76,7 @@ final class FolderStore: ObservableObject {
     // MARK: - 讀取
 
     func reload() {
+        AppLog.write("讀取開始")
         run(work: { (folder: URL) -> LoadResult in
             let data = try FolderStore.coordinatedRead(folder.appendingPathComponent("snapshot.json"))
             let snap = try JSONDecoder().decode(Snapshot.self, from: data)
@@ -85,6 +87,7 @@ final class FolderStore: ObservableObject {
             self.snapshot = result.snapshot
             self.entries = result.entries
             self.readAt = Date()
+            AppLog.write("讀取完成 記帳筆數 " + String(result.entries.count))
             self.showInfo("讀取完成")
         })
     }
@@ -98,6 +101,7 @@ final class FolderStore: ObservableObject {
 
     /// 新增一筆記帳；寫完後 onDone 會在主執行緒被呼叫（成功與否都會）
     func addEntry(_ entry: Entry, onDone: @escaping (Bool) -> Void) {
+        AppLog.write("記帳寫入開始")
         let folder: URL
         do {
             folder = try resolveFolder()
@@ -120,6 +124,7 @@ final class FolderStore: ObservableObject {
                 switch result {
                 case .success(let list):
                     self.entries = list
+                    AppLog.write("記帳寫入完成 共 " + String(list.count) + " 筆")
                     self.showInfo("已寫入 entries.json（共 \(list.count) 筆）")
                     onDone(true)
                 case .failure(let error):
@@ -213,6 +218,7 @@ final class FolderStore: ObservableObject {
     }
 
     func showError(_ error: Error) {
+        AppLog.writeError("操作失敗", error)
         let ns = error as NSError
         var text = "\(ns.domain) \(ns.code)\n\(ns.localizedDescription)"
         if let under = ns.userInfo[NSUnderlyingErrorKey] as? NSError {

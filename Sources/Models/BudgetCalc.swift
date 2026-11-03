@@ -28,7 +28,7 @@ struct BudgetFigures {
         var other: Double = 0
         var necessary: Double = 0
         for entry in entries {
-            if entry.matched { continue }
+            if snapshot.isMatched(entry) { continue }
             if !monthKey.isEmpty && !entry.date.hasPrefix(monthKey) { continue }
             if entry.necessary {
                 necessary += entry.amount

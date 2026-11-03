@@ -33,6 +33,7 @@ App 只寫 `entries.json`，**絕不改 `snapshot.json`**。
 | `Sources/Models/Entry.swift` | 手動記帳一筆的格式＋金額／日期格式化工具 |
 | `Sources/Models/BudgetCalc.swift` | 把未入帳的手動記帳先扣進剩餘預算 |
 | `Sources/Models/FolderStore.swift` | 記住資料夾、讀快照、讀寫 entries.json |
+| `Sources/Models/AppLog.swift` | App 自己的日誌（Documents/logs，留 7 天，不記金額店名帳號） |
 | `Sources/Views/RootView.swift` | 四分頁骨架、工具列按鈕 |
 | `Sources/Views/HomeView.swift` | 首頁 |
 | `Sources/Views/CategoryView.swift` | 分類頁 |

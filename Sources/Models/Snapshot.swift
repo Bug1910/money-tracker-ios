@@ -22,6 +22,8 @@ struct Snapshot: Decodable {
     let pending: [PendingItem]
     let subscriptions: [Subscription]
     let cardMove: [String]
+    /// 電腦端已配對進帳本的手動記帳 id；舊快照沒有這欄就是空陣列
+    let matchedEntryIds: [String]
 
     enum CodingKeys: String, CodingKey {
         case generatedAt = "generated_at"
@@ -30,6 +32,7 @@ struct Snapshot: Decodable {
         case freeMoney = "free_money"
         case assets, months, due, pending, subscriptions
         case cardMove = "card_move"
+        case matchedEntryIds = "matched_entry_ids"
     }
 
     init(from decoder: Decoder) throws {
@@ -45,6 +48,12 @@ struct Snapshot: Decodable {
         pending = c.lenient([PendingItem].self, .pending) ?? []
         subscriptions = c.lenient([Subscription].self, .subscriptions) ?? []
         cardMove = c.lenient([String].self, .cardMove) ?? []
+        matchedEntryIds = c.lenient([String].self, .matchedEntryIds) ?? []
+    }
+
+    /// 這筆手動記帳電腦端配對進帳本了嗎（以快照清單為準；entries.json 自己的 matched 欄位也算）
+    func isMatched(_ entry: Entry) -> Bool {
+        return entry.matched || matchedEntryIds.contains(entry.id)
     }
 
     /// 資料超過幾天算過期

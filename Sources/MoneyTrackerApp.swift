@@ -4,6 +4,11 @@ import SwiftUI
 
 @main
 struct MoneyTrackerApp: App {
+    init() {
+        AppLog.purgeOld()
+        AppLog.write("App 啟動")
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()
