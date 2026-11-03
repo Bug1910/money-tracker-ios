@@ -32,7 +32,7 @@ struct AnalysisView: View {
         List {
             Section("收支趨勢（近 6 月）") {
                 if recentMonths.isEmpty {
-                    Text("尚無資料").foregroundStyle(Color.secondary)
+                    Text("尚無資料").foregroundStyle(Color.primary)
                 } else {
                     TrendChart(months: recentMonths)
                         .frame(height: 180)
@@ -46,12 +46,12 @@ struct AnalysisView: View {
                         HStack {
                             Text(m.month)
                             if !m.settled {
-                                Text("統計中").font(.caption2).foregroundStyle(Color.secondary)
+                                Text("統計中").font(.caption2).foregroundStyle(Color.primary)
                             }
                             Spacer()
                             Text("\(Formats.money(m.income)) / \(Formats.money(m.spending))")
                                 .font(.footnote.monospacedDigit())
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(Color.primary)
                         }
                     }
                 }
@@ -60,7 +60,7 @@ struct AnalysisView: View {
             Section("本月支出結構") {
                 let total: Double = necessaryTotal + otherTotal
                 if total <= 0 {
-                    Text("本月無支出").foregroundStyle(Color.secondary)
+                    Text("本月無支出").foregroundStyle(Color.primary)
                 } else {
                     RatioBar(ratio: necessaryTotal / total, color: Color.blue)
                     AmountRow(title: "必要支出", amount: necessaryTotal)
@@ -111,7 +111,7 @@ struct TrendChart: View {
                 ForEach(months) { (m: Snapshot.MonthBlock) in
                     Text(String(m.month.suffix(2)) + "月")
                         .font(.caption2)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color.primary)
                         .frame(maxWidth: .infinity)
                 }
             }

@@ -19,6 +19,18 @@ struct HomeView: View {
         return list.sorted { (a: Snapshot.DueItem, b: Snapshot.DueItem) -> Bool in a.date < b.date }
     }
 
+    private var nextDueText: String {
+        let later: [Snapshot.DueItem] = snapshot.due.filter { (d: Snapshot.DueItem) -> Bool in
+            guard let days = Formats.daysFromToday(d.date) else { return false }
+            return days > 14
+        }
+        let ordered: [Snapshot.DueItem] = later.sorted { (a: Snapshot.DueItem, b: Snapshot.DueItem) -> Bool in a.date < b.date }
+        if let next = ordered.first {
+            return "近期無待繳，下一筆 \(Formats.shortDate(next.date)) \(next.title)"
+        }
+        return "近期無待繳，無後續帳款"
+    }
+
     private var topFive: [Snapshot.CategoryAmount] {
         guard let month = snapshot.thisMonth else { return [] }
         let sorted: [Snapshot.CategoryAmount] = month.categories.sorted { (a: Snapshot.CategoryAmount, b: Snapshot.CategoryAmount) -> Bool in
@@ -47,10 +59,20 @@ struct HomeView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("剩餘預算")
                         .font(.subheadline)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color.primary)
                     Text(Formats.money(f.left))
-                        .font(.system(size: 40, weight: .bold, design: .rounded).monospacedDigit())
-                        .foregroundStyle(Palette.color(for: f.status))
+                        .font(.largeTitle.bold().monospacedDigit())
+                        .foregroundStyle(Color.primary)
+                        .opacity(snapshot.dataIssue == nil ? 1.0 : 0.4)
+                    if let issue = snapshot.dataIssue {
+                        Label("資料待更新（\(issue)）", systemImage: "exclamationmark.triangle.fill")
+                            .font(.footnote.bold())
+                            .foregroundStyle(Color.primary)
+                    }
+                    DisclosureGroup("預算 \(Formats.money(f.budget)) − 已花 \(Formats.money(f.budget - f.left))") {
+                        necessaryDetail(f)
+                    }
+                    .font(.subheadline)
                     HStack {
                         Text(Palette.label(for: f.status))
                             .font(.caption.bold())
@@ -59,24 +81,46 @@ struct HomeView: View {
                             .background(Palette.color(for: f.status).opacity(0.15))
                             .clipShape(Capsule())
                         Spacer()
-                        Text("預算 \(Formats.money(f.budget))")
-                            .font(.caption)
-                            .foregroundStyle(Color.secondary)
                     }
                     if f.status == .over {
                         Text("已超過本月非必要支出基準")
                             .font(.footnote)
-                            .foregroundStyle(Color.red)
+                            .foregroundStyle(Color.primary)
                     }
                     if f.unsyncedOther > 0 {
                         Text("含手動記帳 \(Formats.money(f.unsyncedOther))（尚未入帳）")
                             .font(.caption)
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(Color.primary)
                     }
                 }
                 .padding(.vertical, 4)
             }
         }
+    }
+
+    /// 算式展開：收入、必要支出、必要待繳、儲蓄目標，以及必要類別有哪些
+    @ViewBuilder
+    private func necessaryDetail(_ f: BudgetFigures) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let free = snapshot.freeMoney {
+                AmountRow(title: "收入", amount: free.income)
+                AmountRow(title: "必要支出", amount: free.necessarySpent)
+                AmountRow(title: "必要待繳", amount: free.necessaryDue)
+                AmountRow(title: "儲蓄目標", amount: free.savingTarget)
+            }
+            let names: [String] = necessaryNames
+            if !names.isEmpty {
+                Text("必要類別：" + names.joined(separator: "、"))
+                    .font(.footnote)
+                    .foregroundStyle(Color.primary)
+            }
+        }
+    }
+
+    private var necessaryNames: [String] {
+        guard let month = snapshot.thisMonth else { return [] }
+        let list: [Snapshot.CategoryAmount] = month.categories.filter { (c: Snapshot.CategoryAmount) -> Bool in c.necessary }
+        return list.map { (c: Snapshot.CategoryAmount) -> String in c.name }
     }
 
     // MARK: 待繳帳款
@@ -85,7 +129,7 @@ struct HomeView: View {
     private var dueSection: some View {
         Section("待繳帳款（14 天內）") {
             if dueSoon.isEmpty {
-                Text("近期無待繳").foregroundStyle(Color.secondary)
+                Text(nextDueText).foregroundStyle(Color.primary)
             } else {
                 ForEach(dueSoon) { (item: Snapshot.DueItem) in
                     DueRow(item: item)
@@ -129,14 +173,14 @@ struct HomeView: View {
                 ForEach(Array(snapshot.pending.prefix(3))) { (item: Snapshot.PendingItem) in
                     HStack {
                         Text(Formats.shortDate(item.date))
-                            .foregroundStyle(Color.secondary)
+                            .foregroundStyle(Color.primary)
                         Text(item.category)
                         Spacer()
                         Text(Formats.money(item.amount)).monospacedDigit()
                     }
                 }
                 if snapshot.pending.count > 3 {
-                    Text("其餘見「待辦」").font(.footnote).foregroundStyle(Color.secondary)
+                    Text("其餘見「帳款」").font(.footnote).foregroundStyle(Color.primary)
                 }
             }
         }
@@ -149,9 +193,15 @@ struct HomeView: View {
         if let assets = snapshot.assets {
             Section("帳戶合計") {
                 AmountRow(title: "合計", amount: assets.total, emphasize: true)
+                    .opacity(snapshot.dataIssue == nil ? 1.0 : 0.4)
+                if assets.notCounted.count > 0 {
+                    Label("未計入：" + assets.notCounted.joined(separator: "、"), systemImage: "minus.circle")
+                        .font(.footnote)
+                        .foregroundStyle(Color.primary)
+                }
                 Text("資料日期 \(snapshot.generatedAt ?? "—")")
                     .font(.footnote)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(Color.primary)
             }
         }
     }
@@ -174,13 +224,13 @@ struct DueRow: View {
                 Text(item.title)
                 Text("\(Formats.shortDate(item.date))・\(dayText)")
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(Color.primary)
             }
             Spacer()
             VStack(alignment: .trailing, spacing: 2) {
                 Text(Formats.money(item.amount)).monospacedDigit()
                 if item.paidGuess {
-                    Text("疑似已繳").font(.caption).foregroundStyle(Color.green)
+                    Text("疑似已繳").font(.caption).foregroundStyle(Color.primary)
                 }
             }
         }

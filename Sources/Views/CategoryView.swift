@@ -40,7 +40,7 @@ struct CategoryView: View {
 
             Section("支出分類") {
                 if sortedCategories.isEmpty {
-                    Text("本月無支出").foregroundStyle(Color.secondary)
+                    Text("本月無支出").foregroundStyle(Color.primary)
                 } else {
                     let maxAmount: Double = sortedCategories.first?.amount ?? 1
                     ForEach(sortedCategories) { (item: Snapshot.CategoryAmount) in
@@ -86,7 +86,7 @@ struct CategoryRow: View {
                 Text(Formats.money(item.amount)).monospacedDigit()
                 Text(pctText)
                     .font(.caption)
-                    .foregroundStyle(Color.secondary)
+                    .foregroundStyle(Color.primary)
                     .frame(width: 52, alignment: .trailing)
             }
             RatioBar(ratio: ratio, color: item.necessary ? Color.blue : Color.orange)

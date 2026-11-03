@@ -14,6 +14,7 @@ private extension KeyedDecodingContainer {
 struct Snapshot: Decodable {
     let generatedAt: String?
     let currentMonth: String?
+    let reconcileOk: Bool?
     let freeMoney: FreeMoney?
     let assets: Assets?
     let months: [MonthBlock]
@@ -25,6 +26,7 @@ struct Snapshot: Decodable {
     enum CodingKeys: String, CodingKey {
         case generatedAt = "generated_at"
         case currentMonth = "current_month"
+        case reconcileOk = "reconcile_ok"
         case freeMoney = "free_money"
         case assets, months, due, pending, subscriptions
         case cardMove = "card_move"
@@ -35,6 +37,7 @@ struct Snapshot: Decodable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         generatedAt = c.lenient(String.self, .generatedAt)
         currentMonth = c.lenient(String.self, .currentMonth)
+        reconcileOk = c.lenient(Bool.self, .reconcileOk)
         freeMoney = c.lenient(FreeMoney.self, .freeMoney)
         assets = c.lenient(Assets.self, .assets)
         months = c.lenient([MonthBlock].self, .months) ?? []
@@ -42,6 +45,17 @@ struct Snapshot: Decodable {
         pending = c.lenient([PendingItem].self, .pending) ?? []
         subscriptions = c.lenient([Subscription].self, .subscriptions) ?? []
         cardMove = c.lenient([String].self, .cardMove) ?? []
+    }
+
+    /// 資料超過幾天算過期
+    static let staleDays: Int = 3
+
+    /// 數字不可信的原因；nil 代表可信。紅線：對帳全 OK 才報數字。
+    var dataIssue: String? {
+        if reconcileOk == false { return "對帳未通過" }
+        guard let stamp = generatedAt, let days = Formats.daysFromToday(stamp) else { return "資料日期不明" }
+        if -days > Snapshot.staleDays { return "資料已 \(-days) 天未更新" }
+        return nil
     }
 
     /// 本月那一塊
@@ -89,15 +103,18 @@ struct Snapshot: Decodable {
     struct Assets: Decodable {
         let total: Double?
         let accounts: [Account]
+        let notCounted: [String]
 
         enum CodingKeys: String, CodingKey {
             case total, accounts
+            case notCounted = "not_counted"
         }
 
         init(from decoder: Decoder) throws {
             let c = try decoder.container(keyedBy: CodingKeys.self)
             total = c.lenient(Double.self, .total)
             accounts = c.lenient([Account].self, .accounts) ?? []
+            notCounted = c.lenient([String].self, .notCounted) ?? []
         }
     }
 

@@ -1,4 +1,4 @@
-// 角色：待辦頁，把「需要他動手或確認的事」集中一處。
+// 角色：帳款頁（分頁名「帳款」），把需要他動手或確認的事集中一處，用小標分區。
 // 分五塊：待繳帳款（全部）、待補資料、訂閱、搬卡清單、帳戶對帳（綠燈＝資料新、橘燈＝太久沒更新）、手動記帳紀錄。
 // 待補資料只顯示日期＋金額＋類別，不顯示店名（隱私規則）。
 import SwiftUI
@@ -16,11 +16,17 @@ struct TodoView: View {
         return Array(sorted.prefix(10))
     }
 
+    private func freshness(_ account: Snapshot.Account) -> String {
+        guard !account.asOf.isEmpty, let days = Formats.daysFromToday(account.asOf) else { return "未更新" }
+        if days >= 0 { return "已更新" }
+        return "未更新 \(-days) 天"
+    }
+
     var body: some View {
         List {
             Section("待繳帳款") {
                 if sortedDue.isEmpty {
-                    Text("無待繳").foregroundStyle(Color.secondary)
+                    Text("無待繳").foregroundStyle(Color.primary)
                 } else {
                     ForEach(sortedDue) { (item: Snapshot.DueItem) in
                         DueRow(item: item)
@@ -33,7 +39,7 @@ struct TodoView: View {
                     ForEach(snapshot.pending) { (item: Snapshot.PendingItem) in
                         HStack {
                             Text(Formats.shortDate(item.date))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(Color.primary)
                             Text(item.category)
                             Spacer()
                             Text(Formats.money(item.amount)).monospacedDigit()
@@ -55,7 +61,7 @@ struct TodoView: View {
                             if !sub.note.isEmpty {
                                 Text(sub.note)
                                     .font(.caption)
-                                    .foregroundStyle(Color.secondary)
+                                    .foregroundStyle(Color.primary)
                             }
                         }
                     }
@@ -74,19 +80,18 @@ struct TodoView: View {
                 Section("帳戶對帳") {
                     ForEach(assets.accounts) { (account: Snapshot.Account) in
                         HStack {
-                            Circle()
-                                .fill(account.stale ? Color.orange : Color.green)
-                                .frame(width: 10, height: 10)
+                            Image(systemName: account.stale ? "exclamationmark.triangle.fill" : "checkmark.circle.fill")
+                                .foregroundStyle(account.stale ? Color.orange : Color.green)
                             Text(account.name)
                             Spacer()
-                            Text(account.asOf.isEmpty ? "—" : Formats.shortDate(account.asOf))
+                            Text(freshness(account))
                                 .font(.caption)
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(Color.primary)
                         }
                     }
-                    Text("橘燈＝超過 30 天未更新")
+                    Text("超過 30 天未更新會標警示")
                         .font(.footnote)
-                        .foregroundStyle(Color.secondary)
+                        .foregroundStyle(Color.primary)
                 }
             }
 
@@ -95,13 +100,13 @@ struct TodoView: View {
                     ForEach(recentEntries) { (entry: Entry) in
                         HStack {
                             Text(Formats.shortDate(entry.date))
-                                .foregroundStyle(Color.secondary)
+                                .foregroundStyle(Color.primary)
                             Text(entry.category.isEmpty ? "未分類" : entry.category)
                             Spacer()
                             Text(Formats.money(entry.amount)).monospacedDigit()
                             Text(entry.matched ? "已入帳" : "待入帳")
                                 .font(.caption)
-                                .foregroundStyle(entry.matched ? Color.green : Color.orange)
+                                .foregroundStyle(Color.primary)
                         }
                     }
                 }
