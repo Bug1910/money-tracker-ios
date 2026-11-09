@@ -78,6 +78,14 @@ enum Formats {
         return piece.replacingOccurrences(of: "-", with: "/")
     }
 
+    /// "2026-11-04" 變「3 天後」「今天」「逾期 2 天」；格式不對就原樣回傳
+    static func relativeDays(_ iso: String) -> String {
+        guard let days = daysFromToday(iso) else { return iso }
+        if days < 0 { return "逾期 \(-days) 天" }
+        if days == 0 { return "今天" }
+        return "\(days) 天後"
+    }
+
     /// 距離今天幾天（過期為負數）；格式不對回 nil
     static func daysFromToday(_ iso: String) -> Int? {
         let f = DateFormatter()

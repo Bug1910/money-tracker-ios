@@ -9,7 +9,7 @@
 
 | 分頁 | 內容 |
 |---|---|
-| 首頁 | 剩餘預算（超支變紅）→ 14 天內待繳帳款 → 本月收支 → 前五支出 → 待補資料 → 帳戶合計 |
+| 首頁 | v5（DESIGN_v2）：第一屏「可動用」大數字＋每日額度＋收合算式＋「待處理」清單；往下才是未出帳卡費 → 必定開支 → 本月剩餘 → 帳戶合計 → 資料日期。算式每列可點跳到對應區塊 |
 | 分類 | 單月支出依類別由大到小的橫條＋金額＋百分比，可切月份（不用圓餅圖） |
 | 帳款 | 待繳帳款、待補資料、訂閱、搬卡清單、帳戶對帳燈、手動記帳紀錄 |
 | 分析 | 近 6 月收支長條圖、本月必要／非必要比例（Canvas 自己畫，無第三方套件） |
@@ -31,7 +31,7 @@ App 只寫 `entries.json`，**絕不改 `snapshot.json`**。
 | `Sources/MoneyTrackerApp.swift` | App 大門 |
 | `Sources/Models/Snapshot.swift` | 看懂 `snapshot.json`（寬鬆讀法，缺欄位不當掉） |
 | `Sources/Models/Entry.swift` | 手動記帳一筆的格式＋金額／日期格式化工具 |
-| `Sources/Models/BudgetCalc.swift` | 把未入帳的手動記帳先扣進剩餘預算 |
+| `Sources/Models/BudgetCalc.swift` | 把未入帳的手動記帳先扣進「本月剩餘」與「可動用」 |
 | `Sources/Models/FolderStore.swift` | 記住資料夾、讀快照、讀寫 entries.json |
 | `Sources/Models/AppLog.swift` | App 自己的日誌（Documents/logs，留 7 天，不記金額店名帳號） |
 | `Sources/Views/RootView.swift` | 四分頁骨架、工具列按鈕 |
@@ -41,8 +41,8 @@ App 只寫 `entries.json`，**絕不改 `snapshot.json`**。
 | `Sources/Views/AnalysisView.swift` | 分析頁（圖） |
 | `Sources/Views/AddEntryView.swift` | 手動記帳表單 |
 | `Sources/Views/SettingsView.swift` | 設定頁 |
-| `Sources/Views/Components.swift` | 共用小零件 |
-| `Sources/Assets.xcassets` | App 圖示（目前是純色佔位） |
+| `Sources/Views/Components.swift` | 共用小零件＋色票 `Theme`（名字對應 Assets 的 Color Set） |
+| `Sources/Assets.xcassets` | App 圖示（目前是純色佔位）＋ 9 組 `mt_*` 顏色（淺色／深色各一，WCAG 實算見 DESIGN_v2 第 8 節） |
 | `.github/workflows/build_ipa.yml` | 雲端 Mac 編譯出 IPA |
 
 ## 怎麼編譯
