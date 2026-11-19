@@ -23,6 +23,74 @@ enum Theme {
     static let accent = Color("mt_accent")
     /// 主要按鈕上的字（深色模式是深色，白字對 accent 不合格）
     static let onAccent = Color("mt_on_accent")
+    /// v6：頁面底色（深色近黑、淺色淡灰）
+    static let bg = Color("mt_bg")
+    /// v6：卡片底色（比頁面高一階）
+    static let card = Color("mt_card")
+
+    /// 圓餅各段顏色：同一個藍色由深到淺，最後一個灰色給「其他」（不靠顏色分辨，旁邊一定有文字清單）
+    static func slice(_ index: Int) -> Color {
+        let steps: [Double] = [1.0, 0.78, 0.6, 0.45, 0.32]
+        if index < steps.count { return accent.opacity(steps[index]) }
+        return stale.opacity(0.6)
+    }
+}
+
+extension View {
+    /// v6 卡片：圓角 20、比底色高一階、細框線，無陰影無漸層
+    func mtCard() -> some View {
+        self
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Theme.line.opacity(0.18), lineWidth: 1)
+            )
+    }
+}
+
+/// 按下去會微縮的彈性按鈕（尊重「減少動態效果」）
+struct PressableStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.96 : 1.0)
+            .opacity(configuration.isPressed ? 0.85 : 1.0)
+            .animation(reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+    }
+}
+
+/// 長條進場動畫：第一次出現時從 0 長到 ratio；ratio 變了也會順著動
+struct AnimatedBar: View {
+    let ratio: Double
+    var color: Color = Theme.accent
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown: Double = 0
+
+    var body: some View {
+        GeometryReader { (proxy: GeometryProxy) -> AnyView in
+            return AnyView(
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Theme.line.opacity(0.18))
+                    Capsule().fill(color).frame(width: proxy.size.width * CGFloat(min(max(shown, 0), 1)))
+                }
+            )
+        }
+        .frame(height: 8)
+        .accessibilityHidden(true)
+        .onAppear { update() }
+        .onChange(of: ratio) { (_: Double, _: Double) in update() }
+    }
+
+    private func update() {
+        if reduceMotion {
+            shown = ratio
+        } else {
+            withAnimation(.easeOut(duration: 0.7)) { shown = ratio }
+        }
+    }
 }
 
 enum Palette {

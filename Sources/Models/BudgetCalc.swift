@@ -15,22 +15,29 @@ enum BudgetStatus {
 struct UnsyncedEntries {
     let necessary: Double
     let other: Double
+    /// 其中「今天」記的合計（已含在 necessary／other 裡，不重複加）
+    let today: Double
     var all: Double { necessary + other }
 
     static func make(snapshot: Snapshot, entries: [Entry]) -> UnsyncedEntries {
         let monthKey: String = snapshot.currentMonth ?? ""
         var other: Double = 0
         var necessary: Double = 0
+        var today: Double = 0
+        let todayKey: String = Formats.dayString(Date())
         for entry in entries {
             if snapshot.isMatched(entry) { continue }
-            if !monthKey.isEmpty && !entry.date.hasPrefix(monthKey) { continue }
+            let isToday: Bool = entry.date == todayKey
+            // 今天記的一律算（現金今天就出去了），其他日期只算快照當月
+            if !monthKey.isEmpty && !entry.date.hasPrefix(monthKey) && !isToday { continue }
+            if isToday { today += entry.amount }
             if entry.necessary {
                 necessary += entry.amount
             } else {
                 other += entry.amount
             }
         }
-        return UnsyncedEntries(necessary: necessary, other: other)
+        return UnsyncedEntries(necessary: necessary, other: other, today: today)
     }
 }
 
@@ -79,5 +86,48 @@ struct LiquidFigures {
         guard let liquid = snapshot.liquid, let base = liquid.available else { return nil }
         let unsynced: UnsyncedEntries = UnsyncedEntries.make(snapshot: snapshot, entries: entries)
         return LiquidFigures(liquid: liquid, baseAvailable: base, unsyncedAll: unsynced.all)
+    }
+}
+
+/// v6 首頁「今天還能花」：快照今日額度 − 今天手機上記的、電腦還沒配對的合計（App 端只做加減）。
+/// - 今天以前記的未配對花費，先從可動用扣掉再重算額度（可動用 ÷ 距發薪天數，無條件捨去），今天記的則直接從額度扣
+/// - 今天已花＝快照今日已花（日期是今天才算）＋今天手記
+/// - 圓環＝快照 today_spent_pct（沒有就沒有環）再加上手記占額度的百分比，夾在 0～100
+struct TodayFigures {
+    let allowance: Double
+    let spentToday: Double
+    let left: Double
+    let ringPct: Double?
+
+    var isOver: Bool { left < 0 }
+
+    static func make(snapshot: Snapshot, entries: [Entry]) -> TodayFigures? {
+        guard let liquid = snapshot.liquid, let base = liquid.available else { return nil }
+        let unsynced: UnsyncedEntries = UnsyncedEntries.make(snapshot: snapshot, entries: entries)
+        let earlier: Double = unsynced.all - unsynced.today
+        var allowance: Double
+        if base - earlier <= 0 {
+            allowance = 0
+        } else if earlier == 0, let given = liquid.dailyAllowance {
+            allowance = given
+        } else if let days = liquid.daysToPayday, days > 0 {
+            allowance = ((base - earlier) / Double(days)).rounded(.down)
+        } else if let given = liquid.dailyAllowance {
+            allowance = given
+        } else {
+            return nil
+        }
+        if allowance < 0 { allowance = 0 }
+        let todayKey: String = Formats.dayString(Date())
+        let snapIsToday: Bool = liquid.todayDate == todayKey
+        let snapSpent: Double = snapIsToday ? (liquid.todaySpent ?? 0) : 0
+        let spent: Double = snapSpent + unsynced.today
+        var ring: Double? = nil
+        if let pct = liquid.todaySpentPct {
+            let basePct: Double = snapIsToday ? pct : 0
+            let extra: Double = allowance > 0 ? unsynced.today * 100 / allowance : 0
+            ring = min(max(basePct + extra, 0), 100)
+        }
+        return TodayFigures(allowance: allowance, spentToday: spent, left: allowance - unsynced.today, ringPct: ring)
     }
 }

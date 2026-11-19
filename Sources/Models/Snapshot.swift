@@ -31,6 +31,10 @@ struct Snapshot: Decodable {
     let cards: [Card]?
     let fixedOutflows: [FixedOutflow]?
     let actions: [ActionItem]?
+    /// v6：本月支出圓餅（程式算好的前幾大類）；nil ＝ 舊快照，退回 months 最後一個月
+    let compo: Compo?
+    /// v6：近三個月各類別並排；nil ＝ 舊快照，退回 months 最後三個月合計
+    let recent3: Recent3?
     let months: [MonthBlock]
     let due: [DueItem]
     let pending: [PendingItem]
@@ -47,7 +51,7 @@ struct Snapshot: Decodable {
         case reconcileIssues = "reconcile_issues"
         case staleDaysOverride = "stale_days"
         case freeMoney = "free_money"
-        case assets, months, due, pending, subscriptions, liquid, cards, actions
+        case assets, months, due, pending, subscriptions, liquid, cards, actions, compo, recent3
         case fixedOutflows = "fixed_outflows"
         case cardMove = "card_move"
         case matchedEntryIds = "matched_entry_ids"
@@ -68,6 +72,8 @@ struct Snapshot: Decodable {
         cards = c.lenient([Card].self, .cards)
         fixedOutflows = c.lenient([FixedOutflow].self, .fixedOutflows)
         actions = c.lenient([ActionItem].self, .actions)
+        compo = c.lenient(Compo.self, .compo)
+        recent3 = c.lenient(Recent3.self, .recent3)
         months = c.lenient([MonthBlock].self, .months) ?? []
         due = c.lenient([DueItem].self, .due) ?? []
         pending = c.lenient([PendingItem].self, .pending) ?? []
@@ -163,9 +169,18 @@ struct Snapshot: Decodable {
         let nextPayday: String?
         let daysToPayday: Int?
         let dailyAllowance: Double?
+        /// v6：今日（快照最後一天）日期與已花、已花占今日額度的百分比（0～100）、是否超過
+        let todayDate: String?
+        let todaySpent: Double?
+        let todaySpentPct: Double?
+        let todayOver: Bool?
 
         enum CodingKeys: String, CodingKey {
             case available, reserve
+            case todayDate = "today_date"
+            case todaySpent = "today_spent"
+            case todaySpentPct = "today_spent_pct"
+            case todayOver = "today_over"
             case accountsAvailable = "accounts_available"
             case cardsUnbilledTotal = "cards_unbilled_total"
             case cardsStatementDueTotal = "cards_statement_due_total"
@@ -190,6 +205,107 @@ struct Snapshot: Decodable {
             nextPayday = c.lenient(String.self, .nextPayday)
             daysToPayday = c.lenient(Int.self, .daysToPayday)
             dailyAllowance = c.lenient(Double.self, .dailyAllowance)
+            todayDate = c.lenient(String.self, .todayDate)
+            todaySpent = c.lenient(Double.self, .todaySpent)
+            todaySpentPct = c.lenient(Double.self, .todaySpentPct)
+            todayOver = c.lenient(Bool.self, .todayOver)
+        }
+    }
+
+    /// v6：本月支出圓餅。segments 是前幾大類，rest 是其餘合併；欄位缺了就是空
+    struct Compo: Decodable {
+        let month: String?
+        let total: Double?
+        let segments: [CompoSegment]
+        let rest: CompoRest?
+
+        enum CodingKeys: String, CodingKey { case month, total, segments, rest }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            month = c.lenient(String.self, .month)
+            total = c.lenient(Double.self, .total)
+            segments = c.lenient([CompoSegment].self, .segments) ?? []
+            rest = c.lenient(CompoRest.self, .rest)
+        }
+    }
+
+    struct CompoSegment: Decodable, Identifiable {
+        let name: String
+        let amount: Double
+        let pct: Double?
+        var id: String { name }
+
+        enum CodingKeys: String, CodingKey { case name, amount, pct }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            name = c.lenient(String.self, .name) ?? "—"
+            amount = c.lenient(Double.self, .amount) ?? 0
+            pct = c.lenient(Double.self, .pct)
+        }
+    }
+
+    struct CompoRest: Decodable {
+        let count: Int?
+        let amount: Double
+        let pct: Double?
+
+        enum CodingKeys: String, CodingKey { case count, amount, pct }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            count = c.lenient(Int.self, .count)
+            amount = c.lenient(Double.self, .amount) ?? 0
+            pct = c.lenient(Double.self, .pct)
+        }
+    }
+
+    /// v6：近三個月（舊到新）各類別當月實數
+    struct Recent3: Decodable {
+        let months: [Recent3Month]
+        let rows: [Recent3Row]
+        let totals: [Double]
+
+        enum CodingKeys: String, CodingKey { case months, rows, totals }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            months = c.lenient([Recent3Month].self, .months) ?? []
+            rows = c.lenient([Recent3Row].self, .rows) ?? []
+            totals = c.lenient([Double].self, .totals) ?? []
+        }
+    }
+
+    struct Recent3Month: Decodable, Identifiable {
+        let month: String
+        let spending: Double
+        let settled: Bool
+        var id: String { month }
+
+        enum CodingKeys: String, CodingKey { case month, spending, settled }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            month = c.lenient(String.self, .month) ?? ""
+            spending = c.lenient(Double.self, .spending) ?? 0
+            settled = c.lenient(Bool.self, .settled) ?? false
+        }
+    }
+
+    struct Recent3Row: Decodable, Identifiable {
+        let name: String
+        let necessary: Bool
+        let amounts: [Double]
+        var id: String { name }
+
+        enum CodingKeys: String, CodingKey { case name, necessary, amounts }
+
+        init(from decoder: Decoder) throws {
+            let c = try decoder.container(keyedBy: CodingKeys.self)
+            name = c.lenient(String.self, .name) ?? "—"
+            necessary = c.lenient(Bool.self, .necessary) ?? false
+            amounts = c.lenient([Double].self, .amounts) ?? []
         }
     }
 

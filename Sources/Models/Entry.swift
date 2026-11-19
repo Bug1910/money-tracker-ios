@@ -15,9 +15,11 @@ struct Entry: Identifiable {
 
     /// 轉成寫進 entries.json 的字典
     func toJSON() -> [String: Any] {
+        // 金額整數元就寫成整數（電腦端讀 entries.json 的格式不變）
+        let amountValue: Any = (amount == amount.rounded() && abs(amount) < 1e12) ? (Int(amount) as Any) : (amount as Any)
         var dict: [String: Any] = [
             "id": id,
-            "amount": amount,
+            "amount": amountValue,
             "necessary": necessary,
             "date": date,
             "created_at": createdAt,
