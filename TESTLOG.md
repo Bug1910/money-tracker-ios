@@ -7,6 +7,7 @@
 | v2 雲端編譯 | v2 | CI 成功（run 41712081933） |
 | v3 雲端編譯 | v3 | CI 成功（run 41712617877） |
 | v5 雲端編譯（首頁第二版） | v5（dc2e161） | CI 成功（run 42567163604，44 秒，0 個 Swift 警告） |
+| v6 雲端編譯（新視覺＋只打金額記帳） | v6（e435f91） | CI 成功（run 44625021609，50 秒，一輪過，編譯警告 0） |
 
 ## 還沒測過
 | 項目 | 備註 |
@@ -14,6 +15,9 @@
 | v2 四分頁實機畫面 | 需側載後看 |
 | v5 首頁第二版實機畫面 | 三態（有資料／過期／對帳失敗）、算式點列捲動是否到位（id 放在區塊標題上）、深色模式色票、Dynamic Type AX 尺寸大數字換行；側載 MoneyTracker-v5.ipa 後看 |
 | v5 退路畫面 | 舊快照（沒有 liquid、cards、fixed_outflows、actions）→ 本月剩餘在最上面＋「設定」列；對帳失敗精簡 JSON（只有 generated_at／generated_time／reconcile_ok／reconcile_issues）→ 大數字「—」；未實測 |
+| v6 全部畫面與手感 | 只驗到編譯成功，沒在模擬器／實機看過：首頁圓環與圓餅進場動畫、數字跳動、數字鍵盤手感與觸覺回饋、存完打勾動畫與自動關閉、左滑刪除與「復原」、深淺色、Dynamic Type、VoiceOver、減少動態效果 |
+| v6 記帳佇列 | 沒選資料夾／雲端寫不進去時先存本機、之後補寫、以 id 去重；entries.json 舊格式讀入；整數金額寫法被電腦端讀到；實機＋電腦端驗 |
+| v6 新欄位 | 快照 liquid.today_*、compo、recent3 的實際長相對照電腦端產出；缺欄位舊快照退路（無環、圓餅退回清單、近三個月退回三月合計） |
 | 手動記帳寫入 entries.json 並被電腦端讀到 | 實機＋電腦端配對 |
 | 空資料、缺欄位、entries.json 不存在 | 程式已容錯，未實測 |
 
@@ -24,3 +28,4 @@
 | 2026-11-04 | v3 | UX 審查七點（可信度／對比／字級／算式／帳款頁／三態空狀態）；逐行檢查＋CI | CI run 41712617877 編譯成功（1m44s） | 見 commit；實機仍未測 |
 | 2026-11-04 | v4 | matched_entry_ids：Snapshot 缺欄位→空陣列（lenient 讀法）；Snapshot.isMatched = entry.matched 或 id 在清單；BudgetFigures 只扣 isMatched=false 的本月記帳；帳款頁標籤用同一函式。App 日誌 AppLog。無測試 target、本機無 Swift，驗證方式＝逐行推演三情境（舊快照無欄位／id 在清單／id 不在清單）＋CI 編譯 | CI run 41713324862 編譯成功（1m49s） | — |
 | 2026-11-09 | v5 | 依 DESIGN_v2 重做首頁：Snapshot 新增 liquid／cards／fixed_outflows／actions／accounts[].available／generated_time／reconcile_issues／stale_days（全 optional）；LiquidFigures 扣全部未配對手動記帳；HomeView 七區塊＋直式算式可點捲動＋待處理六種標籤；三態與對帳失敗；色票 9 組 Color Set（淺／深）；RootView 分頁 selection 綁定。本機無 Swift，驗證方式＝逐行推演三情境（新快照全欄位／舊快照缺新欄位／對帳失敗精簡 JSON）＋括號配對計數＋CI 編譯；隱私 grep（4 位以上數字、銀行名、人名）全 repo 0 命中 | CI run 42567163604 編譯成功（44 秒、0 警告）；IPA 重壓為 `C:\Tools\Installers\MoneyTracker\MoneyTracker-v5.ipa`（224,537 bytes，舊 v1 IPA 已刪） | — |
+| 2026-11-20 | v6 | 依「只打金額」重做：記帳畫面（自製數字鍵盤、存＝成功觸覺＋打勾動畫＋自動關閉、更多＝分類／必要／備註／日期）；記帳先進本機佇列再補寫 entries.json（以 id 去重、寫失敗不丟）；左滑刪除＋復原；首頁三塊（今天還能花＋圓環、距發薪日＋總共可花、錢花去哪圓餅，Swift Charts）；分頁改 首頁／花費／事項／設定；色票改單一藍色重點色＋bg／card；Snapshot 新增 liquid.today_*、compo、recent3（全 optional）；TodayFigures＝今日額度扣今天手記（App 只做加減）；版本 6.0（build 6）。部署目標維持 iOS 17.0（Charts SectorMark、numericText 皆 17 起可用，不需 #available）。本機無 Swift，驗證＝逐檔檢查＋CI 編譯；隱私 grep（4 位以上數字、銀行／卡片／店名）全 repo 0 命中 | CI run 44625021609 編譯成功（50 秒、0 修正輪）；IPA 已放 `C:\Tools\Installers\MoneyTracker\MoneyTracker-v6.ipa`（280,888 bytes）；畫面與手感沒實測 | — |
